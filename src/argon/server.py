@@ -19,7 +19,23 @@ mcp = MCPServer(name="Argon-Video-Director")
 
 # Initialize local engines
 video_engine = VideoEngine(use_gpu=True)
-caption_engine = CaptionGenerator(model_size="base")
+caption_engine = CaptionGenerator(model_size="tiny")
+
+def _get_safe_output_path(input_path: str, suffix: str, ext: Optional[str] = None) -> str:
+    base, original_ext = os.path.splitext(input_path)
+    extension = ext or original_ext
+    candidate_dir = os.path.dirname(os.path.abspath(input_path))
+    try:
+        test_file = os.path.join(candidate_dir, ".test_write_perm")
+        with open(test_file, "w") as f:
+            f.write("1")
+        os.remove(test_file)
+        return f"{base}{suffix}{extension}"
+    except Exception:
+        user_videos = os.path.expanduser(r"~\Videos")
+        os.makedirs(user_videos, exist_ok=True)
+        filename = os.path.splitext(os.path.basename(input_path))[0]
+        return os.path.join(user_videos, f"{filename}{suffix}{extension}")
 
 @mcp.tool(description="Inspect video resolution, fps, duration, and codecs.")
 def argon_get_video_info(video_path: str) -> Dict[str, Any]:
@@ -35,8 +51,7 @@ def argon_lossless_cut(
 ) -> str:
     """Cut a video segment losslessly."""
     if not output_path:
-        base, ext = os.path.splitext(video_path)
-        output_path = f"{base}_cut{ext}"
+        output_path = _get_safe_output_path(video_path, "_cut")
     return video_engine.lossless_cut(video_path, output_path, start_time, end_time)
 
 @mcp.tool(description="Convert horizontal (16:9) video into Instagram Reel (9:16, 1080x1920) with blurred background padding.")
@@ -47,8 +62,7 @@ def argon_reframe_vertical(
 ) -> str:
     """Reframe video into 9:16 vertical using Intel QSV hardware acceleration."""
     if not output_path:
-        base, ext = os.path.splitext(video_path)
-        output_path = f"{base}_reel_9x16{ext}"
+        output_path = _get_safe_output_path(video_path, "_reel_9x16", ".mp4")
     return video_engine.reframe_to_vertical(
         input_path=video_path,
         output_path=output_path,
@@ -63,8 +77,7 @@ def argon_generate_captions(
 ) -> str:
     """Generate kinetic SRT subtitles from video audio."""
     if not output_srt_path:
-        base, _ = os.path.splitext(video_path)
-        output_srt_path = f"{base}_captions.srt"
+        output_srt_path = _get_safe_output_path(video_path, "_captions", ".srt")
     return caption_engine.generate_srt(video_path, output_srt_path)
 
 @mcp.tool(description="Burn high-visibility yellow/white subtitles directly into a video.")
@@ -75,8 +88,7 @@ def argon_burn_subtitles(
 ) -> str:
     """Burn subtitles into video."""
     if not output_path:
-        base, ext = os.path.splitext(video_path)
-        output_path = f"{base}_subtitled{ext}"
+        output_path = _get_safe_output_path(video_path, "_subtitled", ".mp4")
     return video_engine.burn_subtitles(video_path, srt_path, output_path)
 
 @mcp.tool(description="Autonomous end-to-end Reel Creator: Directs, slices, reframes (9:16), and subtitles a video for Instagram.")
@@ -95,8 +107,7 @@ def argon_create_reel(
     5. Burns Whisper subtitles
     """
     if not output_path:
-        base, ext = os.path.splitext(video_path)
-        output_path = f"{base}_FINAL_REEL{ext}"
+        output_path = _get_safe_output_path(video_path, "_FINAL_REEL", ".mp4")
 
     temp_dir = tempfile.mkdtemp(prefix="argon_reel_")
     director = GeminiDirector()

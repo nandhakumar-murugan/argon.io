@@ -19,15 +19,39 @@ from .captions import CaptionGenerator
 from .director import GeminiDirector
 
 engine = VideoEngine(use_gpu=True)
-caption_gen = CaptionGenerator(model_size="base")
+caption_gen = CaptionGenerator(model_size="tiny")
+
+def _get_safe_output_path(input_path: str, suffix: str, ext: Optional[str] = None) -> str:
+    base, original_ext = os.path.splitext(input_path)
+    extension = ext or original_ext
+    candidate_dir = os.path.dirname(os.path.abspath(input_path))
+    try:
+        test_file = os.path.join(candidate_dir, ".test_write_perm")
+        with open(test_file, "w") as f:
+            f.write("1")
+        os.remove(test_file)
+        return f"{base}{suffix}{extension}"
+    except Exception:
+        user_videos = os.path.expanduser(r"~\Videos")
+        os.makedirs(user_videos, exist_ok=True)
+        filename = os.path.splitext(os.path.basename(input_path))[0]
+        return os.path.join(user_videos, f"{filename}{suffix}{extension}")
+
+default_input = r"D:\videos\2025-10-01 15-06-09.mkv"
+default_rendered = r"C:\Users\smnk2\Videos\2025-10-01_15-06-09_ARGON_REEL_HORMOZI.mp4"
 
 # Store current project state
 STUDIO_STATE = {
-    "current_video": None,
-    "last_rendered": None,
-    "metadata": None,
+    "current_video": default_input if os.path.exists(default_input) else None,
+    "last_rendered": default_rendered if os.path.exists(default_rendered) else None,
+    "metadata": engine.get_video_metadata(default_input) if os.path.exists(default_input) else None,
     "silences": [],
-    "logs": ["Argon Studio Engine initialized.", "Intel Quick Sync (QSV) hardware acceleration detected: YES."],
+    "logs": [
+        "Argon Studio Pro initialized.",
+        "Intel Quick Sync (QSV) hardware acceleration detected: YES.",
+        "Active project loaded: 2025-10-01 15-06-09.mkv",
+        "Rendered 9:16 Reel loaded: 2025-10-01_15-06-09_ARGON_REEL_HORMOZI.mp4"
+    ],
     "public_tunnel_url": ""
 }
 
@@ -84,8 +108,7 @@ async def api_remove_silences(request: Request):
     if not path or not os.path.exists(path):
         return JSONResponse({"error": "No valid video loaded"}, status_code=400)
     
-    base, ext = os.path.splitext(path)
-    out_path = f"{base}_no_silence{ext}"
+    out_path = _get_safe_output_path(path, "_no_silence", ext)
     res = engine.remove_silences(path, out_path)
     STUDIO_STATE["last_rendered"] = res
     STUDIO_STATE["logs"].append(f"Removed dead air. Created: {os.path.basename(res)}")
@@ -99,7 +122,7 @@ async def api_reframe(request: Request):
         return JSONResponse({"error": "No valid video loaded"}, status_code=400)
     
     base, ext = os.path.splitext(path)
-    out_path = f"{base}_reel_9x16{ext}"
+    out_path = _get_safe_output_path(path, "_reel_9x16", ".mp4")
     res = engine.reframe_to_vertical(path, out_path)
     STUDIO_STATE["last_rendered"] = res
     STUDIO_STATE["logs"].append(f"Reframed to 9:16 vertical using Intel QSV: {os.path.basename(res)}")
@@ -114,9 +137,9 @@ async def api_subtitles(request: Request):
         return JSONResponse({"error": "No valid video loaded"}, status_code=400)
     
     base, ext = os.path.splitext(path)
-    srt_file = f"{base}_captions.srt"
+    srt_file = _get_safe_output_path(path, "_captions", ".srt")
     caption_gen.generate_srt(path, srt_file)
-    out_path = f"{base}_subtitled{ext}"
+    out_path = _get_safe_output_path(path, f"_{style}_subtitled", ".mp4")
     res = engine.burn_subtitles(path, srt_file, out_path, style_preset=style)
     STUDIO_STATE["last_rendered"] = res
     STUDIO_STATE["logs"].append(f"Generated & burned {style} subtitles: {os.path.basename(res)}")

@@ -17,7 +17,7 @@ def _format_timestamp(seconds: float) -> str:
     return f"{hrs:02d}:{mins:02d}:{secs:02d},{msecs:03d}"
 
 class CaptionGenerator:
-    def __init__(self, model_size: str = "base"):
+    def __init__(self, model_size: str = "tiny"):
         self.model_size = model_size
         self._model = None
 
