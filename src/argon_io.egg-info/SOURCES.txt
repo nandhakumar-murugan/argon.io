@@ -1,0 +1,13 @@
+pyproject.toml
+src/argon/__init__.py
+src/argon/captions.py
+src/argon/director.py
+src/argon/engine.py
+src/argon/schemas.py
+src/argon/server.py
+src/argon_io.egg-info/PKG-INFO
+src/argon_io.egg-info/SOURCES.txt
+src/argon_io.egg-info/dependency_links.txt
+src/argon_io.egg-info/entry_points.txt
+src/argon_io.egg-info/requires.txt
+src/argon_io.egg-info/top_level.txt

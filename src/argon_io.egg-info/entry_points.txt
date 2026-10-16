@@ -1,0 +1,2 @@
+[console_scripts]
+argon = argon.server:main

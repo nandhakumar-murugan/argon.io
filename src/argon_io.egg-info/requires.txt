@@ -1,0 +1,4 @@
+mcp
+google-genai>=2.9.0
+openai-whisper
+pydantic>=2.0.0

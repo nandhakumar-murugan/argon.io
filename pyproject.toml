@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "argon-io"
+version = "0.1.0"
+description = "Autonomous Multimodal Video Director & Reels Generator powered by Gemini 4 Argon, Intel QSV, and Model Context Protocol (MCP)."
+readme = "README.md"
+authors = [
+    { name = "Nandhakumar Murugan", email = "smnk2006@gmail.com" }
+]
+license = { text = "Apache-2.0" }
+dependencies = [
+    "mcp",
+    "google-genai>=2.9.0",
+    "openai-whisper",
+    "pydantic>=2.0.0"
+]
+
+[project.scripts]
+argon = "argon.server:main"
