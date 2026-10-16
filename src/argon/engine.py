@@ -181,15 +181,146 @@ class VideoEngine:
 
         return output_path
 
-    def burn_subtitles(self, video_path: str, srt_path: str, output_path: str) -> str:
-        """Burn subtitles (.srt or .ass) into video with high-visibility styling."""
+    def detect_silences(
+        self,
+        video_path: str,
+        noise_db: float = -30.0,
+        min_duration: float = 0.5
+    ) -> List[Dict[str, float]]:
+        """
+        Detect pauses and awkward dead air in audio using FFmpeg silencedetect.
+        Returns a list of silence intervals with start and end times.
+        """
+        import re
+        cmd = [
+            self.ffmpeg,
+            "-i", video_path,
+            "-af", f"silencedetect=noise={noise_db}dB:d={min_duration}",
+            "-f", "null",
+            "-"
+        ]
+        res = subprocess.run(cmd, capture_output=True, text=True, errors="replace")
+        
+        silences = []
+        current_start = None
+        for line in res.stderr.splitlines():
+            m_start = re.search(r"silence_start:\s*([0-9.]+)", line)
+            if m_start:
+                current_start = float(m_start.group(1))
+            m_end = re.search(r"silence_end:\s*([0-9.]+)\s*\|\s*silence_duration:\s*([0-9.]+)", line)
+            if m_end and current_start is not None:
+                end_t = float(m_end.group(1))
+                dur = float(m_end.group(2))
+                silences.append({
+                    "start": current_start,
+                    "end": end_t,
+                    "duration": dur
+                })
+                current_start = None
+        return silences
+
+    def remove_silences(
+        self,
+        video_path: str,
+        output_path: str,
+        noise_db: float = -30.0,
+        min_duration: float = 0.5
+    ) -> str:
+        """
+        Automatically cuts dead air and silences to create high-retention fast-paced Reels.
+        """
+        meta = self.get_video_metadata(video_path)
+        total_duration = meta["duration"]
+        silences = self.detect_silences(video_path, noise_db=noise_db, min_duration=min_duration)
+
+        if not silences:
+            shutil.copyfile(video_path, output_path)
+            return output_path
+
+        # Invert silences into speech chunks
+        speech_chunks = []
+        last_t = 0.0
+        for s in silences:
+            if s["start"] > last_t + 0.1:
+                speech_chunks.append((last_t, s["start"]))
+            last_t = s["end"]
+        if last_t < total_duration - 0.1:
+            speech_chunks.append((last_t, total_duration))
+
+        temp_dir = tempfile.mkdtemp(prefix="argon_speech_")
+        cut_files = []
+        try:
+            for i, (st, en) in enumerate(speech_chunks):
+                chunk_file = os.path.join(temp_dir, f"chunk_{i:04d}.mp4")
+                self.lossless_cut(video_path, chunk_file, f"{st:.3f}", f"{en:.3f}")
+                cut_files.append(chunk_file)
+            self.concat_clips(cut_files, output_path)
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+        return output_path
+
+    def apply_zoom_punch(
+        self,
+        video_path: str,
+        output_path: str,
+        zoom_factor: float = 1.15
+    ) -> str:
+        """
+        Applies a dynamic 1.15x punch-in zoom to keep the viewer's gaze engaged.
+        """
+        os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+        meta = self.get_video_metadata(video_path)
+        w, h = meta["width"], meta["height"]
+        crop_w = int(w / zoom_factor)
+        crop_h = int(h / zoom_factor)
+
+        filter_graph = f"crop={crop_w}:{crop_h}:(in_w-{crop_w})/2:(in_h-{crop_h})/2,scale={w}:{h}"
+        encoder = "h264_qsv" if self._has_qsv else "libx264"
+        cmd = [
+            self.ffmpeg,
+            "-y",
+            "-i", video_path,
+            "-vf", filter_graph,
+            "-c:v", encoder,
+            "-b:v", "6M",
+            "-c:a", "copy",
+            output_path
+        ]
+        subprocess.run(cmd, capture_output=True, check=True)
+        return output_path
+
+    def burn_subtitles(
+        self,
+        video_path: str,
+        srt_path: str,
+        output_path: str,
+        style_preset: str = "hormozi"
+    ) -> str:
+        """Burn subtitles into video with customized short-form styles (Hormozi, MrBeast, Neon, Clean)."""
         os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
         clean_srt = os.path.abspath(srt_path).replace("\\", "/").replace(":", "\\:")
-        subtitle_filter = (
-            f"subtitles='{clean_srt}':force_style='"
-            "FontName=Arial Black,FontSize=20,PrimaryColour=&H0000FFFF,"
-            "BackColour=&H80000000,BorderStyle=3,Outline=2,Shadow=1,Alignment=2,MarginV=60'"
-        )
+
+        styles = {
+            "hormozi": (
+                "FontName=Arial Black,FontSize=22,PrimaryColour=&H0000FFFF,"
+                "BackColour=&H80000000,BorderStyle=3,Outline=2.5,Shadow=1.5,Alignment=2,MarginV=65"
+            ),
+            "mrbeast": (
+                "FontName=Arial Black,FontSize=22,PrimaryColour=&H0000FF00,"
+                "BackColour=&H90000000,BorderStyle=3,Outline=3,Shadow=2,Alignment=2,MarginV=65"
+            ),
+            "neon": (
+                "FontName=Arial Black,FontSize=21,PrimaryColour=&H00FFFF00,"
+                "BackColour=&H90FF00FF,BorderStyle=3,Outline=2.5,Shadow=3,Alignment=2,MarginV=65"
+            ),
+            "clean": (
+                "FontName=Segoe UI Semibold,FontSize=19,PrimaryColour=&H00FFFFFF,"
+                "BackColour=&H80000000,BorderStyle=1,Outline=1.5,Shadow=1,Alignment=2,MarginV=55"
+            )
+        }
+        chosen_style = styles.get(style_preset.lower(), styles["hormozi"])
+        subtitle_filter = f"subtitles='{clean_srt}':force_style='{chosen_style}'"
 
         encoder = "h264_qsv" if self._has_qsv else "libx264"
         cmd = [

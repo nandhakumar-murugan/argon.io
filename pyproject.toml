@@ -21,3 +21,4 @@ dependencies = [
 [project.scripts]
 argon = "argon.server:main"
 argon-mcp = "argon.server:main"
+argon-studio = "argon.server:main"

@@ -192,11 +192,14 @@ def _start_tunnel(port: int):
                     m = re.search(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com", line)
                     if m:
                         public_url = m.group(0)
+                        from .studio import set_studio_tunnel
+                        set_studio_tunnel(public_url)
                         print("\n" + "=" * 65)
-                        print("🚀 ARGON.IO IS LIVE & READY FOR GEMINI SPARK!")
+                        print("🚀 ARGON.IO STUDIO & GEMINI SPARK MCP LIVE!")
                         print("=" * 65)
+                        print(f"👉 Argon Studio Web UI : http://127.0.0.1:{port}/studio")
                         print(f"👉 Gemini Spark MCP URL: {public_url}/mcp")
-                        print(f"👉 Local Direct URL    : http://127.0.0.1:{port}/mcp")
+                        print(f"👉 Local MCP Endpoint  : http://127.0.0.1:{port}/mcp")
                         print("=" * 65)
                         print("\n📋 How to connect in Gemini Spark (Web):")
                         print("1. Go to Gemini Spark (https://gemini.google.com/spark)")
@@ -211,34 +214,49 @@ def _start_tunnel(port: int):
             print(f"[Argon] Cloudflare tunnel warning: {e}", flush=True)
 
     print(f"\n[Info] Cloudflare tunnel binary not found in standard paths.")
-    print(f"       Argon is listening locally on: http://127.0.0.1:{port}/mcp")
+    print(f"       Argon Studio is listening locally on: http://127.0.0.1:{port}/studio")
     print(f"       To expose to Gemini Spark: install cloudflared or run ngrok http {port}\n", flush=True)
     return None
 
 
 def main():
-    """Run the Argon MCP server in stdio, HTTP, or with automatic Gemini Spark tunnel."""
-    import argparse
-    from mcp.server.streamable_http_manager import TransportSecuritySettings
+    """Run the Argon MCP server in stdio, HTTP, or with interactive Studio UI & Gemini Spark tunnel."""
+    import sys
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
-    parser = argparse.ArgumentParser(description="Argon.io - AI Video Director MCP Server")
-    parser.add_argument("command", nargs="?", default="serve", help="Command: serve")
+    import argparse
+    import webbrowser
+    import uvicorn
+    from starlette.applications import Starlette
+    from starlette.middleware import Middleware
+    from starlette.middleware.cors import CORSMiddleware
+    from mcp.server.streamable_http_manager import TransportSecuritySettings
+    from .studio import STUDIO_ROUTES
+
+    parser = argparse.ArgumentParser(description="Argon.io - AI Video Director & Studio")
+    parser.add_argument("command", nargs="?", default="serve", choices=["serve", "studio", "ui"], help="Command: serve, studio, ui")
     parser.add_argument("--transport", default=None, choices=["stdio", "sse", "streamable-http"], help="MCP transport mode")
     parser.add_argument("--spark", "--tunnel", "--remote", action="store_true", dest="remote", help="Launch public HTTPS tunnel for Gemini Spark (web)")
     parser.add_argument("--host", default="0.0.0.0", help="Host interface (default: 0.0.0.0)")
-    parser.add_argument("--port", type=int, default=8080, help="Port for HTTP/SSE mode (default: 8080)")
+    parser.add_argument("--port", type=int, default=8080, help="Port for Studio / HTTP mode (default: 8080)")
+    parser.add_argument("--open", "-o", action="store_true", help="Automatically open Argon Studio UI in browser")
     args, _ = parser.parse_known_args()
 
-    # Determine transport
-    if args.remote or args.transport in ["streamable-http", "sse"]:
-        transport = args.transport or "streamable-http"
+    is_studio_mode = args.command in ["studio", "ui"] or args.remote or args.transport in ["streamable-http", "sse"]
+
+    if is_studio_mode:
         print("=" * 65)
-        print("🎬 Argon.io - Autonomous AI Video Director MCP Server")
+        print("🎬 Argon.io Studio - Autonomous AI Video Director")
         print("   Powered by Gemini 4 Argon & Intel QSV Hardware Engine")
         print("=" * 65)
-        print(f"Local Server: http://{args.host}:{args.port}/mcp (Streamable HTTP)")
+        print(f"👉 Web Studio: http://127.0.0.1:{args.port}/studio")
+        print(f"👉 Local MCP : http://127.0.0.1:{args.port}/mcp")
 
-        if args.remote:
+        if args.remote or args.command in ["studio", "ui"]:
             _start_tunnel(args.port)
 
         sec_settings = TransportSecuritySettings(
@@ -247,12 +265,32 @@ def main():
             allowed_origins=["*"]
         )
 
-        mcp.run(
-            transport=transport,
-            host=args.host,
-            port=args.port,
-            transport_security=sec_settings
+        app_streamable = mcp.streamable_http_app(transport_security=sec_settings)
+        combined_routes = STUDIO_ROUTES + list(app_streamable.routes)
+        combined_middleware = [
+            Middleware(
+                CORSMiddleware,
+                allow_origins=["*"],
+                allow_methods=["*"],
+                allow_headers=["*"],
+                allow_credentials=True,
+            )
+        ]
+        app = Starlette(
+            routes=combined_routes,
+            middleware=combined_middleware,
+            lifespan=app_streamable.router.lifespan_context
         )
+
+        if args.open or args.command in ["studio", "ui"]:
+            def _open_browser():
+                import time
+                time.sleep(1.2)
+                webbrowser.open(f"http://127.0.0.1:{args.port}/studio")
+            import threading
+            threading.Thread(target=_open_browser, daemon=True).start()
+
+        uvicorn.run(app, host=args.host, port=args.port, log_level="info")
     else:
         # Default to stdio for local desktop apps (Claude Desktop, Cursor, Antigravity)
         mcp.run(transport="stdio")

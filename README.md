@@ -37,18 +37,41 @@ flowchart TD
 
 ---
 
-## ⚡ Key Capabilities
+## 🖥️ Argon Studio Pro Web UI
 
-1. **Gemini 4 Argon Multimodal Director**:
-   Watches raw video footage (MP4, MOV, WebM), evaluates audience retention curves, eliminates dead air, and synthesizes an exact timestamped Edit Decision List (`ReelPlan`).
-2. **Intel Iris Xe Hardware Rendering (QSV)**:
-   Uses Direct3D11 and Intel Quick Sync (`-hwaccel qsv -c:v h264_qsv`) to render 1080×1920 60fps Reels at **150–250+ fps** with zero CPU strain.
-3. **Smart 9:16 Reframe**:
-   Automatically adapts horizontal 16:9 recordings into full 9:16 vertical video using blurred mirrored background padding.
-4. **Local Kinetic Subtitles (OpenAI Whisper)**:
-   Generates animated 3-4 word highlight subtitles directly from audio offline.
-5. **Lossless Slicing**:
-   Cuts clips in under 0.2 seconds via stream copy without re-encoding.
+Argon.io comes with a **built-in Next-Gen Studio Web Interface** that completely outclasses basic desktop video apps.
+
+```bash
+argon studio
+# or
+argon-studio --open
+```
+
+### 🌟 Studio Pro Features:
+- 📱 **Interactive 9:16 iPhone 16 Pro Simulator**: Live HTML5 player simulating real phone viewing.
+- 🛡️ **Instagram & TikTok Safe-Zone Overlays**: Visual toggle that prevents buttons, captions, and profile icons from covering your subtitles.
+- ⚡ **Auto-Silence & Dead-Air Remover**: Automatically cuts pauses (>0.5s) to maximize audience retention.
+- 🎨 **Kinetic Subtitle Theme Engine**:
+  - **Hormozi Pop**: Bold Yellow fill with dark outline.
+  - **MrBeast Punch**: High-contrast Lime Green with thick stroke.
+  - **Cyberpunk Neon**: Electric Cyan and Magenta glow.
+  - **Minimal Clean**: Elegant white drop shadow.
+- 🔍 **Dynamic 1.15x Zoom Punches**: Automatically punches into key moments to keep viewers glued.
+- 🏎️ **Live Hardware Telemetry**: Real-time Intel QSV GPU speed (200+ FPS) and tunnel connection status.
+
+---
+
+## ⚡ Key Capabilities (Argon.io vs Palmier.io)
+
+| Feature | Palmier.io | Argon.io |
+| :--- | :--- | :--- |
+| **Operating System** | macOS (Apple Silicon Only) ❌ | **Windows, Linux, macOS** (Universal) ✅ |
+| **Hardware Engine** | Apple Metal / VideoToolbox | **Intel Quick Sync (QSV) & Direct3D 11** (240 FPS) ✅ |
+| **AI Director Brain** | Generic LLMs | **Gemini 4 Argon** (Deep Temporal Reasoning) ✅ |
+| **Interactive Studio UI**| Proprietary Mac app | **Built-in Studio Web UI + Safe Zones** ✅ |
+| **Silence / Dead-Air Cut**| Manual | **Automatic AI Silence Detection & Removal** ✅ |
+| **Subtitle Presets** | Basic white font | **Hormozi, MrBeast, Cyberpunk, Minimalist** ✅ |
+| **Open Source** | Closed / Paid | **100% Open-Source (Apache-2.0)** ✅ |
 
 ---
 
