@@ -158,13 +158,105 @@ def argon_create_reel(
         "instagram_caption": plan.instagram_post_caption,
     }
 
+def _start_tunnel(port: int):
+    """Starts a public secure tunnel (Cloudflare or ngrok) for web clients like Gemini Spark."""
+    import shutil
+    import subprocess
+    import threading
+    import re
+
+    cf_bin = shutil.which("cloudflared") or shutil.which("cloudflared.exe")
+    if not cf_bin:
+        for candidate in [
+            r"C:\Program Files (x86)\cloudflared\cloudflared.exe",
+            r"C:\Program Files\cloudflared\cloudflared.exe",
+            os.path.expanduser("~/.cloudflared/cloudflared.exe"),
+        ]:
+            if os.path.exists(candidate):
+                cf_bin = candidate
+                break
+
+    if cf_bin:
+        try:
+            proc = subprocess.Popen(
+                [cf_bin, "tunnel", "--protocol", "http2", "--url", f"http://127.0.0.1:{port}"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding="utf-8",
+                errors="replace"
+            )
+
+            def _reader(pipe):
+                for line in iter(pipe.readline, ""):
+                    m = re.search(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com", line)
+                    if m:
+                        public_url = m.group(0)
+                        print("\n" + "=" * 65)
+                        print("🚀 ARGON.IO IS LIVE & READY FOR GEMINI SPARK!")
+                        print("=" * 65)
+                        print(f"👉 Gemini Spark MCP URL: {public_url}/mcp")
+                        print(f"👉 Local Direct URL    : http://127.0.0.1:{port}/mcp")
+                        print("=" * 65)
+                        print("\n📋 How to connect in Gemini Spark (Web):")
+                        print("1. Go to Gemini Spark (https://gemini.google.com/spark)")
+                        print("2. Navigate to Settings > Connected Apps / MCP Tools")
+                        print("3. Add Custom MCP Server and paste the URL above")
+                        print("4. Done! Gemini 4 Argon can now direct and edit reels directly on your PC!\n")
+                        print("=" * 65 + "\n", flush=True)
+
+            threading.Thread(target=_reader, args=(proc.stderr,), daemon=True).start()
+            return proc
+        except Exception as e:
+            print(f"[Argon] Cloudflare tunnel warning: {e}", flush=True)
+
+    print(f"\n[Info] Cloudflare tunnel binary not found in standard paths.")
+    print(f"       Argon is listening locally on: http://127.0.0.1:{port}/mcp")
+    print(f"       To expose to Gemini Spark: install cloudflared or run ngrok http {port}\n", flush=True)
+    return None
+
+
 def main():
-    """Run the Argon MCP server on stdio or HTTP."""
-    print("=" * 60)
-    print("🎬 Argon.io - AI Video Director MCP Server Live")
-    print("   Powered by Gemini 4 Argon & Intel QSV Engine")
-    print("=" * 60, flush=True)
-    mcp.run()
+    """Run the Argon MCP server in stdio, HTTP, or with automatic Gemini Spark tunnel."""
+    import argparse
+    from mcp.server.streamable_http_manager import TransportSecuritySettings
+
+    parser = argparse.ArgumentParser(description="Argon.io - AI Video Director MCP Server")
+    parser.add_argument("command", nargs="?", default="serve", help="Command: serve")
+    parser.add_argument("--transport", default=None, choices=["stdio", "sse", "streamable-http"], help="MCP transport mode")
+    parser.add_argument("--spark", "--tunnel", "--remote", action="store_true", dest="remote", help="Launch public HTTPS tunnel for Gemini Spark (web)")
+    parser.add_argument("--host", default="0.0.0.0", help="Host interface (default: 0.0.0.0)")
+    parser.add_argument("--port", type=int, default=8080, help="Port for HTTP/SSE mode (default: 8080)")
+    args, _ = parser.parse_known_args()
+
+    # Determine transport
+    if args.remote or args.transport in ["streamable-http", "sse"]:
+        transport = args.transport or "streamable-http"
+        print("=" * 65)
+        print("🎬 Argon.io - Autonomous AI Video Director MCP Server")
+        print("   Powered by Gemini 4 Argon & Intel QSV Hardware Engine")
+        print("=" * 65)
+        print(f"Local Server: http://{args.host}:{args.port}/mcp (Streamable HTTP)")
+
+        if args.remote:
+            _start_tunnel(args.port)
+
+        sec_settings = TransportSecuritySettings(
+            enable_dns_rebinding_protection=False,
+            allowed_hosts=["*"],
+            allowed_origins=["*"]
+        )
+
+        mcp.run(
+            transport=transport,
+            host=args.host,
+            port=args.port,
+            transport_security=sec_settings
+        )
+    else:
+        # Default to stdio for local desktop apps (Claude Desktop, Cursor, Antigravity)
+        mcp.run(transport="stdio")
+
 
 if __name__ == "__main__":
     main()

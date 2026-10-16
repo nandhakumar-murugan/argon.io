@@ -52,25 +52,56 @@ flowchart TD
 
 ---
 
-## 🔌 Connection to Gemini Spark & Antigravity Bridge
+## 🔌 Connecting Argon.io to AI Clients (The Palmier.io Method)
 
-Argon.io is integrated into the **Gemini Antigravity Bridge**, allowing **Gemini 4 Argon in your online Gemini Spark workspace** to directly control video rendering on your laptop.
+Argon.io is a 100% standalone MCP server that can be connected to any AI model, whether running in the **cloud (Gemini Spark)** or locally on your **desktop (Claude Desktop, Cursor, Antigravity)**.
 
-### 1. Launch Bridge with Public Tunnel:
-```bash
-python C:\Users\smnk2\.gemini\antigravity\scratch\antigravity-mcp-bridge\run_with_tunnel.py
+### 🌐 Method 1: Connecting to Online Gemini Spark (Web AI)
+
+Because Gemini Spark runs in your web browser, it connects to your PC via a secure public MCP endpoint (just like Palmier's remote method):
+
+1. **Launch the Argon MCP Server with Tunnel**:
+   ```bash
+   argon serve --spark
+   ```
+   *Argon will automatically launch a high-speed Cloudflare HTTPS tunnel and display:*
+   ```
+   =================================================================
+   🚀 ARGON.IO IS LIVE & READY FOR GEMINI SPARK!
+   =================================================================
+   👉 Gemini Spark MCP URL: https://<random-id>.trycloudflare.com/mcp
+   👉 Local Direct URL    : http://127.0.0.1:8080/mcp
+   =================================================================
+   ```
+
+2. **Add to Gemini Spark**:
+   - Open **[Gemini Spark](https://gemini.google.com/spark)**.
+   - Go to **Settings > Connected Apps / MCP Tools**.
+   - Click **Add Custom MCP** and paste your URL:
+     ```
+     https://<random-id>.trycloudflare.com/mcp
+     ```
+
+3. **Autonomously Direct Reels with Gemini 4 Argon**:
+   > *"Argon, inspect `C:\recordings\podcast.mp4`, select the most viral 30-second punchline, reframe it to 9:16 vertical, and burn kinetic Whisper subtitles."*
+
+---
+
+### 💻 Method 2: Connecting to Local Desktop Clients (Claude Desktop, Cursor, Antigravity)
+
+For desktop AI tools that run locally on your operating system, Argon connects directly via high-speed zero-overhead `stdio`:
+
+Add to your `claude_desktop_config.json` or `mcp_settings.json`:
+```json
+{
+  "mcpServers": {
+    "argon": {
+      "command": "argon"
+    }
+  }
+}
 ```
-
-### 2. Connect in Gemini Spark:
-In Gemini Spark's Connected Apps / Custom MCP settings:
-```
-Endpoint: https://<your-tunnel>.trycloudflare.com/mcp
-```
-
-### 3. Command Gemini 4 Argon in Online Spark:
-> *"Argon, inspect `D:\videos\demo.mp4` and generate a 30-second Instagram Reel highlighting the architecture with kinetic subtitles."*
-
-Gemini 4 Argon will formulate the plan and call `argon_create_instagram_reel` through the tunnel to render the file directly on your local machine!
+*Argon will start instantly on demand whenever your desktop AI assistant needs video editing tools.*
 
 ---
 

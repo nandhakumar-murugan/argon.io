@@ -20,3 +20,4 @@ dependencies = [
 
 [project.scripts]
 argon = "argon.server:main"
+argon-mcp = "argon.server:main"
