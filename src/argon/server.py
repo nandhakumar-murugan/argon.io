@@ -15,6 +15,8 @@ from .director import GeminiDirector
 from .schemas import ReelPlan
 from .timeline import Timeline
 from .presets import CAPTION_PRESETS
+from .audio import AudioEngine
+from .effects import EffectsEngine
 
 # Initialize the Argon MCP Server
 mcp = MCPServer(name="Argon-Video-Director")
@@ -22,6 +24,8 @@ mcp = MCPServer(name="Argon-Video-Director")
 # Initialize local engines
 video_engine = VideoEngine(use_gpu=True)
 caption_engine = CaptionGenerator(model_size="tiny")
+audio_engine = AudioEngine()
+effects_engine = EffectsEngine(use_gpu=True)
 global_timeline = Timeline(name="Argon Active Project", aspect_ratio="9:16")
 
 def _get_safe_output_path(input_path: str, suffix: str, ext: Optional[str] = None) -> str:
@@ -274,6 +278,57 @@ def export_project(output_path: Optional[str] = None, export_type: str = "mp4") 
             output_path = os.path.expanduser(r"~\Videos\argon_rendered_timeline.mp4")
         res = global_timeline.render(output_path)
         return {"status": "ok", "type": "mp4", "output_path": res}
+
+@mcp.tool(description="Generate natural studio-quality AI neural voiceover narration from text (e.g. 'tech_founder', 'product_specialist', 'creator_casual').")
+def argon_generate_voiceover(
+    text: str,
+    voice_id: str = "tech_founder",
+    output_path: Optional[str] = None
+) -> Dict[str, Any]:
+    """Generate studio AI voiceover narration."""
+    if not output_path:
+        output_path = os.path.expanduser(r"~\Videos\argon_voiceover.mp3")
+    res = audio_engine.generate_voiceover(text, voice_id=voice_id, output_path=output_path)
+    return {"status": "ok", "voice": voice_id, "output_path": res}
+
+@mcp.tool(description="Mix ambient background music into a video with automatic sidechain audio ducking when speech is detected.")
+def argon_mix_music(
+    video_path: str,
+    music_path: Optional[str] = None,
+    output_path: Optional[str] = None,
+    music_volume: float = 0.16
+) -> Dict[str, Any]:
+    """Mix background music with dialogue ducking."""
+    if not output_path:
+        output_path = _get_safe_output_path(video_path, "_with_music", ".mp4")
+    res = audio_engine.mix_music_with_ducking(video_path, output_path, music_path=music_path, music_volume=music_volume)
+    return {"status": "ok", "output_path": res}
+
+@mcp.tool(description="Add an expanding retention progress bar along the bottom of a video to maximize social watch time.")
+def argon_add_progress_bar(
+    video_path: str,
+    output_path: Optional[str] = None,
+    bar_color: str = "#8b5cf6",
+    bar_height: int = 6
+) -> Dict[str, Any]:
+    """Add viral social retention progress bar."""
+    if not output_path:
+        output_path = _get_safe_output_path(video_path, "_with_bar", ".mp4")
+    res = effects_engine.add_retention_progress_bar(video_path, output_path, bar_color=bar_color, bar_height=bar_height)
+    return {"status": "ok", "output_path": res}
+
+@mcp.tool(description="Wrap raw screen recordings into a floating browser/device window with ambient blurred backdrop.")
+def argon_wrap_mockup(
+    video_path: str,
+    output_path: Optional[str] = None,
+    target_resolution: str = "1080:1920",
+    window_scale: float = 0.90
+) -> Dict[str, Any]:
+    """Beautify screen recording inside floating device mockup."""
+    if not output_path:
+        output_path = _get_safe_output_path(video_path, "_mockup", ".mp4")
+    res = effects_engine.wrap_in_device_mockup(video_path, output_path, target_resolution=target_resolution, window_scale=window_scale)
+    return {"status": "ok", "output_path": res}
 
 def _start_tunnel(port: int):
     """Starts a public secure tunnel (Cloudflare or ngrok) for web clients like Gemini Spark."""
