@@ -7,6 +7,62 @@ Supports ASS and SRT force_style parameters, SVG overlays, and FFmpeg filter gra
 from typing import Dict, Any
 
 CAPTION_PRESETS: Dict[str, Dict[str, Any]] = {
+    # ── @nxndx_31 Signature Creator Presets ────────────────────────────────────
+    "nxndx_campus_vlog": {
+        "name": "👑 NXNDX Campus Vlog (KGiSL & Coimbatore)",
+        "orientation": "vertical",
+        "description": "Authentic @nxndx_31 lifestyle style: Bold warm gold/amber pop, high-contrast dark stroke, Instagram safe-zone margins (margin_v: 85) for college & cultural vlogs.",
+        "font_name": "Arial Black",
+        "font_size": 26,
+        "bold": True,
+        "primary_color": "&H0000D7FF",  # Warm Gold/Amber (BGR)
+        "outline_color": "&H00000000",
+        "back_color": "&HA0000000",
+        "border_style": 1,
+        "outline": 3.0,
+        "shadow": 2.5,
+        "alignment": 2,  # Bottom center
+        "margin_v": 85,  # Clears IG Reel bottom ticker and action buttons
+        "max_words_per_line": 3,
+        "animation": "pop"
+    },
+    "nxndx_gsa_tech": {
+        "name": "🚀 NXNDX Google Ambassador (Tech & AI)",
+        "orientation": "vertical",
+        "description": "Sleek Google Student Ambassador & AI builder aesthetic: Crisp white typography with electric Google Cyan accent and glowing progress bar.",
+        "font_name": "Segoe UI",
+        "font_size": 24,
+        "bold": True,
+        "primary_color": "&H00FFFFFF",
+        "outline_color": "&H00F4B400",  # Google Amber/Cyan accent
+        "back_color": "&HB0000000",
+        "border_style": 1,
+        "outline": 2.0,
+        "shadow": 2.0,
+        "alignment": 2,
+        "margin_v": 85,
+        "max_words_per_line": 3,
+        "animation": "fade"
+    },
+    "nxndx_mass_reel": {
+        "name": "🔥 NXNDX Mass Tamil Energy (Don Vibe)",
+        "orientation": "vertical",
+        "description": "High-octane mass attitude reel: Bold Impact font with electric yellow/red contrast for swag moments and beat drops.",
+        "font_name": "Impact",
+        "font_size": 28,
+        "bold": True,
+        "primary_color": "&H0000FFFF",  # Vibrant Yellow
+        "outline_color": "&H00000000",
+        "back_color": "&HC0000080",
+        "border_style": 3,
+        "outline": 2.5,
+        "shadow": 3.0,
+        "alignment": 2,
+        "margin_v": 90,
+        "max_words_per_line": 2,
+        "animation": "punch"
+    },
+
     # ── Vertical Presets (1080x1920: Reels / TikTok / Shorts) ───────────────
     "clean_creator": {
         "name": "Clean Creator",

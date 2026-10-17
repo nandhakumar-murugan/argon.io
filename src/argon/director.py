@@ -48,11 +48,23 @@ class GeminiDirector:
 
         print(f"[Argon Director] Video active. Submitting to {self.model_id} with tunable reasoning ...", flush=True)
 
-        system_instruction = (
-            "You are a World-Class Short-Form Video Director for Instagram Reels and YouTube Shorts. "
-            "Analyze the uploaded video through time, identify the most engaging viral hook, eliminate dead air, "
-            "and synthesize an exact, timestamped Edit Decision List (ReelPlan)."
-        )
+        is_nxndx_style = any(k in user_prompt.lower() for k in ["nxndx", "nandha", "kgisl", "kite", "campus", "vlog", "coimbatore", "gsa", "ambassador", "like me", "my account"])
+        
+        if is_nxndx_style:
+            system_instruction = (
+                "You are the dedicated AI Video Director for Nandhakumar Murugan (@nxndx_31), a Google Student Ambassador at KGiSL (Coimbatore). "
+                "His signature Instagram Reels style features: "
+                "1. Relatable Campus Life / College Vlogs: Time-stamped hooks (e.g. '8:30 AM to 12:50 PM ✨🙏', 'Wait for the 4:30 PM energy 🏃‍♂️💨', 'College polamaa… 😎🔥'), "
+                "   witty Tanglish humor ('Campus la student, vibe la DON! 🎒👑'), community question CTAs ('Best part of college Pooja? 👀🪔'), and trending Coimbatore/KITE hashtags (#KGiSL #KITE #Coimbatore #CollegeVlog #TamilReels). "
+                "2. Google Ambassador & Tech Innovation: Empowering student builders, Gemini AI models, late-night coding sessions (#GoogleStudentAmbassador #TeamGemini #GSA2026). "
+                "Synthesize an exact, timestamped Edit Decision List (ReelPlan) that matches his authentic pacing, energy, and tone."
+            )
+        else:
+            system_instruction = (
+                "You are a World-Class Short-Form Video Director for Instagram Reels and YouTube Shorts. "
+                "Analyze the uploaded video through time, identify the most engaging viral hook, eliminate dead air, "
+                "and synthesize an exact, timestamped Edit Decision List (ReelPlan)."
+            )
 
         prompt = f"""
         User Request: {user_prompt}

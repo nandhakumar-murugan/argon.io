@@ -437,6 +437,9 @@ STUDIO_HTML = """<!DOCTYPE html>
             <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
               <div class="flex items-center gap-3">
                 <select id="director-subtitle-preset" class="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs font-medium text-gray-200 focus:outline-none">
+                  <option value="nxndx_campus_vlog">👑 NXNDX Campus Vlog (@nxndx_31 KGiSL / KITE)</option>
+                  <option value="nxndx_gsa_tech">🚀 NXNDX Google Ambassador (Tech & AI)</option>
+                  <option value="nxndx_mass_reel">🔥 NXNDX Mass Tamil Energy (Don Vibe)</option>
                   <option value="keyword_yellow">Preset: Keyword Yellow (Hormozi)</option>
                   <option value="clean_creator">Preset: Clean Creator (White Bold)</option>
                   <option value="mrbeast">Preset: MrBeast Punch (Lime Green)</option>

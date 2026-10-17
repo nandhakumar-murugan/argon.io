@@ -149,3 +149,5 @@ class AudioEngine:
         ]
         subprocess.run(cmd, capture_output=True, text=True, check=True)
         return output_path
+
+    mix_background_music = mix_music_with_ducking

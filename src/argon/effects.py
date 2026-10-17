@@ -120,3 +120,5 @@ class EffectsEngine:
                 subprocess.run(cmd, capture_output=True, text=True, check=True)
 
         return output_path
+
+    add_progress_bar = add_retention_progress_bar
