@@ -13,6 +13,8 @@ from .engine import VideoEngine
 from .captions import CaptionGenerator
 from .director import GeminiDirector
 from .schemas import ReelPlan
+from .timeline import Timeline
+from .presets import CAPTION_PRESETS
 
 # Initialize the Argon MCP Server
 mcp = MCPServer(name="Argon-Video-Director")
@@ -20,6 +22,7 @@ mcp = MCPServer(name="Argon-Video-Director")
 # Initialize local engines
 video_engine = VideoEngine(use_gpu=True)
 caption_engine = CaptionGenerator(model_size="tiny")
+global_timeline = Timeline(name="Argon Active Project", aspect_ratio="9:16")
 
 def _get_safe_output_path(input_path: str, suffix: str, ext: Optional[str] = None) -> str:
     base, original_ext = os.path.splitext(input_path)
@@ -168,6 +171,109 @@ def argon_create_reel(
         "duration_seconds": video_engine.get_video_metadata(output_path)["duration"],
         "instagram_caption": plan.instagram_post_caption,
     }
+
+# ─── Palmier-Compatible NLE Multi-Track Timeline Tools ───────────────────────
+
+@mcp.tool(description="Read the active multi-track NLE timeline, tracks, clips, aspect ratio, and total duration.")
+def get_timeline() -> Dict[str, Any]:
+    """Read the active multi-track timeline structure."""
+    return global_timeline.to_dict()
+
+@mcp.tool(description="Set timeline canvas aspect ratio ('16:9', '9:16', '1:1', '4:5') and frame rate.")
+def set_project_settings(aspect_ratio: str = "9:16", fps: float = 30.0) -> Dict[str, Any]:
+    """Change project canvas resolution and aspect ratio."""
+    global_timeline.set_aspect_ratio(aspect_ratio)
+    global_timeline.fps = fps
+    return global_timeline.to_dict()
+
+@mcp.tool(description="Add a media clip to a timeline track (e.g., 'v1' primary, 'v2' b-roll, 'a1' dialogue, 'a2' music).")
+def add_clips(
+    track_id: str,
+    source_path: str,
+    start_time: Optional[float] = None,
+    duration: Optional[float] = None,
+    source_in: float = 0.0,
+    source_out: Optional[float] = None
+) -> Dict[str, Any]:
+    """Place a clip on the timeline."""
+    clip = global_timeline.add_clip(
+        track_id=track_id,
+        source_path=source_path,
+        start_time=start_time,
+        duration=duration,
+        source_in=source_in,
+        source_out=source_out
+    )
+    return {"status": "ok", "clip": clip.to_dict(), "timeline": global_timeline.to_dict()}
+
+@mcp.tool(description="Insert a media clip at an exact timecode and ripple all subsequent clips forward.")
+def insert_clips(
+    track_id: str,
+    source_path: str,
+    insert_time: float,
+    duration: Optional[float] = None
+) -> Dict[str, Any]:
+    """Insert clip and ripple forward."""
+    clip = global_timeline.insert_clip(
+        track_id=track_id,
+        source_path=source_path,
+        insert_time=insert_time,
+        duration=duration
+    )
+    return {"status": "ok", "clip": clip.to_dict(), "timeline": global_timeline.to_dict()}
+
+@mcp.tool(description="Split a clip into two separate segments at an exact timecode frame.")
+def split_clips(clip_id: str, split_time: float) -> Dict[str, Any]:
+    """Split clip into two."""
+    parts = global_timeline.split_clip(clip_id, split_time)
+    return {"status": "ok", "parts": [p.to_dict() for p in parts]}
+
+@mcp.tool(description="Remove a clip from the timeline, optionally closing the resulting gap.")
+def remove_clips(clip_id: str, ripple: bool = True) -> Dict[str, Any]:
+    """Delete a clip."""
+    success = global_timeline.remove_clip(clip_id, ripple=ripple)
+    return {"status": "ok" if success else "not_found", "timeline": global_timeline.to_dict()}
+
+@mcp.tool(description="Ripple delete a time range [start_time, end_time] across all tracks and close the gap.")
+def ripple_delete_ranges(start_time: float, end_time: float) -> Dict[str, Any]:
+    """Delete time range and ripple close."""
+    removed_sec = global_timeline.ripple_delete_range(start_time, end_time)
+    return {"status": "ok", "removed_seconds": removed_sec, "timeline": global_timeline.to_dict()}
+
+@mcp.tool(description="Automatically detect and eliminate awkward dead air pauses and silences from a video.")
+def remove_silence(video_path: str, noise_db: float = -30.0, min_duration: float = 0.5) -> Dict[str, Any]:
+    """Dead air auto-cutter."""
+    out_path = _get_safe_output_path(video_path, "_no_silence", ".mp4")
+    res = video_engine.remove_silences(video_path, out_path, noise_db=noise_db, min_duration=min_duration)
+    return {"status": "ok", "output_path": res}
+
+@mcp.tool(description="List all 28 verified Palmier-compatible caption presets and styles.")
+def list_caption_presets() -> Dict[str, Any]:
+    """List 28 verified caption templates."""
+    return {"presets": CAPTION_PRESETS}
+
+@mcp.tool(description="Add stylized captions to a video using any of the 28 verified presets (e.g. 'keyword_yellow', 'clean_creator', 'mrbeast', 'typewriter_terminal').")
+def add_captions(video_path: str, preset_id: str = "keyword_yellow") -> Dict[str, Any]:
+    """Burn subtitles with chosen preset."""
+    srt_path = _get_safe_output_path(video_path, "_captions", ".srt")
+    caption_engine.generate_srt(video_path, srt_path)
+    out_path = _get_safe_output_path(video_path, f"_{preset_id}_subtitled", ".mp4")
+    res = video_engine.burn_subtitles(video_path, srt_path, out_path, style_preset=preset_id)
+    return {"status": "ok", "output_path": res, "srt_path": srt_path, "preset": preset_id}
+
+@mcp.tool(description="Export project to MP4 (Intel QSV hardware accelerated) or Apple Final Cut Pro / Adobe Premiere XML.")
+def export_project(output_path: Optional[str] = None, export_type: str = "mp4") -> Dict[str, Any]:
+    """Export project as MP4 or FCPXML/XML."""
+    if export_type in ["fcpxml", "xml"]:
+        if not output_path:
+            output_path = os.path.expanduser(r"~\Videos\argon_project.fcpxml")
+        res = global_timeline.export_fcpxml(output_path)
+        return {"status": "ok", "type": "fcpxml", "output_path": res}
+    else:
+        if not output_path:
+            output_path = os.path.expanduser(r"~\Videos\argon_rendered_timeline.mp4")
+        res = global_timeline.render(output_path)
+        return {"status": "ok", "type": "mp4", "output_path": res}
 
 def _start_tunnel(port: int):
     """Starts a public secure tunnel (Cloudflare or ngrok) for web clients like Gemini Spark."""

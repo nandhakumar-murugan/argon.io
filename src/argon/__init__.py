@@ -9,11 +9,17 @@ from .engine import VideoEngine
 from .captions import CaptionGenerator
 from .director import GeminiDirector
 from .schemas import ReelPlan, ClipSegment
+from .timeline import Timeline, Clip, Track
+from .presets import CAPTION_PRESETS
 
 __all__ = [
     "VideoEngine",
     "CaptionGenerator",
     "GeminiDirector",
     "ReelPlan",
-    "ClipSegment"
+    "ClipSegment",
+    "Timeline",
+    "Clip",
+    "Track",
+    "CAPTION_PRESETS"
 ]

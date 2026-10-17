@@ -301,25 +301,26 @@ class VideoEngine:
         os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
         clean_srt = os.path.abspath(srt_path).replace("\\", "/").replace(":", "\\:")
 
-        styles = {
-            "hormozi": (
-                "FontName=Arial Black,FontSize=22,PrimaryColour=&H0000FFFF,"
-                "BackColour=&H80000000,BorderStyle=3,Outline=2.5,Shadow=1.5,Alignment=2,MarginV=65"
-            ),
-            "mrbeast": (
-                "FontName=Arial Black,FontSize=22,PrimaryColour=&H0000FF00,"
-                "BackColour=&H90000000,BorderStyle=3,Outline=3,Shadow=2,Alignment=2,MarginV=65"
-            ),
-            "neon": (
-                "FontName=Arial Black,FontSize=21,PrimaryColour=&H00FFFF00,"
-                "BackColour=&H90FF00FF,BorderStyle=3,Outline=2.5,Shadow=3,Alignment=2,MarginV=65"
-            ),
-            "clean": (
-                "FontName=Segoe UI Semibold,FontSize=19,PrimaryColour=&H00FFFFFF,"
-                "BackColour=&H80000000,BorderStyle=1,Outline=1.5,Shadow=1,Alignment=2,MarginV=55"
-            )
-        }
-        chosen_style = styles.get(style_preset.lower(), styles["hormozi"])
+        try:
+            from .presets import get_ass_style_string
+            chosen_style = get_ass_style_string(style_preset)
+        except Exception:
+            styles = {
+                "hormozi": (
+                    "FontName=Arial Black,FontSize=22,PrimaryColour=&H0000FFFF,"
+                    "BackColour=&H80000000,BorderStyle=3,Outline=2.5,Shadow=1.5,Alignment=2,MarginV=65"
+                ),
+                "mrbeast": (
+                    "FontName=Arial Black,FontSize=22,PrimaryColour=&H0000FF00,"
+                    "BackColour=&H90000000,BorderStyle=3,Outline=3,Shadow=2,Alignment=2,MarginV=65"
+                ),
+                "clean": (
+                    "FontName=Segoe UI Semibold,FontSize=19,PrimaryColour=&H00FFFFFF,"
+                    "BackColour=&H80000000,BorderStyle=1,Outline=1.5,Shadow=1,Alignment=2,MarginV=55"
+                )
+            }
+            chosen_style = styles.get(style_preset.lower(), styles["hormozi"])
+
         subtitle_filter = f"subtitles='{clean_srt}':force_style='{chosen_style}'"
 
         encoder = "h264_qsv" if self._has_qsv else "libx264"
